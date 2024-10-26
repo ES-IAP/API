@@ -1,2 +1,7 @@
-"fastapi[all]"
+fastapi[all]
 requests
+pyjwt
+boto3
+sqlalchemy
+pymysql
+python-jose
