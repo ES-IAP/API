@@ -5,3 +5,6 @@ boto3
 sqlalchemy
 pymysql
 python-jose
+pytest
+moto
+testcontainers

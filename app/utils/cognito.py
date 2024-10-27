@@ -1,7 +1,7 @@
-import requests
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException, Header
 from jose import jwt
 from app.config import COGNITO_REGION, USER_POOL_ID, CLIENT_ID, COGNITO_DOMAIN
+import requests
 
 def get_cognito_public_keys():
     url = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
@@ -17,19 +17,17 @@ def validate_jwt_token(token: str):
     if key is None:
         raise ValueError("Public key not found")
 
-    # Decode the token without enforcing `at_hash` validation
     decoded_token = jwt.decode(
         token,
         key,
         algorithms=["RS256"],
         audience=CLIENT_ID,
         issuer=f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}",
-        options={"verify_at_hash": False}  # Disables the `at_hash` claim verification
+        options={"verify_at_hash": False}
     )
-
     # Debugging: Print the entire decoded token to see its structure
     print("Decoded Token:", decoded_token)
-    
+
     return decoded_token
 
 def get_user_info(access_token: str):
@@ -40,3 +38,14 @@ def get_user_info(access_token: str):
         return response.json()
     else:
         raise HTTPException(status_code=response.status_code, detail="Unable to fetch user info from Cognito")
+
+# Dependency function for token validation
+def get_current_user_info(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=400, detail="Invalid Authorization header format")
+    token = authorization.split("Bearer ")[1]
+    try:
+        user_info = validate_jwt_token(token)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return user_info
