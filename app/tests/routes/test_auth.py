@@ -15,6 +15,7 @@ def mock_get_current_user_info():
         "sub": "f02c79fc-f021-706f-aee1-709122218560"
     }
 
+
 # Test for successful login without an existing user
 @patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
 def test_login_success(mock_validate_token):
@@ -98,12 +99,17 @@ def test_get_current_user_success(mock_get_user_by_cognito_id, mock_validate_tok
 
 # `/me` test for user not found scenario
 @patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
-@patch("app.crud.user.get_user_by_cognito_id", return_value=None) 
+@patch("app.crud.user.get_user_by_cognito_id", return_value=None)
 def test_get_current_user_not_found(mock_get_user_by_cognito_id, mock_validate_token):
-
+    # Override the dependency
     app.dependency_overrides[get_user_by_cognito_id] = lambda cognito_id, db: None
+
     # Make the request
     response = client.get("/me", headers={"Authorization": "Bearer header.payload.signature"})
+
+    # Debug prints
+    print(f"Response status code: {response.status_code}")
+    print(f"Response JSON: {response.json()}")
 
     # Assertions
     assert response.status_code == 404
@@ -111,6 +117,9 @@ def test_get_current_user_not_found(mock_get_user_by_cognito_id, mock_validate_t
 
     # Clear dependency overrides after the test
     del app.dependency_overrides[get_user_by_cognito_id]
+
+if __name__ == "__main__":
+    test_get_current_user_not_found()
     
 # def test_logout():
 #     response = client.get("/logout", follow_redirects=False)
