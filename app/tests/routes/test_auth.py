@@ -1,76 +1,119 @@
-import os
-import pytest
+from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-from unittest.mock import patch, MagicMock
 from app.main import app
-from app.db.database import Base, get_db
+from app.schemas.user import NewUser
+from app.db.database import get_db
+from app.crud.user import get_user_by_cognito_id, create_user
 
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
-
-# Set up test client
 client = TestClient(app)
 
-# Use SQLite in-memory database for testing
-engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-# Dependency override for testing
-def override_get_db():
-    Base.metadata.create_all(bind=engine)
-    try:
-        db = TestSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-app.dependency_overrides[get_db] = override_get_db
-
-# Test registration endpoint
-@patch("boto3.client")
-def test_register_user(mock_boto_client):
-    mocked_client = MagicMock()
-    mock_boto_client.return_value = mocked_client
-    mocked_client.sign_up.return_value = {"UserSub": "test_user_sub"}
-    
-    response = client.post("/register", json={
-        "username": "testuser",
-        "email": "testuser@example.com",
-        "password": "Password123!"
-    })
-    
-    assert response.status_code == 200
-    assert response.json()["message"] == "User registered successfully"
-
-# Test login endpoint with JWT validation mock
-@patch("app.utils.cognito.validate_jwt_token")
-def test_login_user(mock_validate_jwt):
-    # Mock token validation to return dummy user info
-    mock_validate_jwt.return_value = {
+# Mock function to simulate user token info
+def mock_get_current_user_info():
+    return {
         "cognito:username": "testuser",
         "email": "testuser@example.com",
-        "sub": "test_cognito_id"
+        "sub": "f02c79fc-f021-706f-aee1-709122218560"
     }
 
-    response = client.post("/login", headers={"Authorization": "Bearer test_token"})
-    
-    assert response.status_code == 200
-    assert response.json()["message"] == "Login successful"
-    assert response.json()["user"]["username"] == "testuser"
-    assert response.json()["user"]["email"] == "testuser@example.com"
+# Test for successful login without an existing user
+@patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
+def test_login_success(mock_validate_token):
+    print("Starting test_login_success")
 
-# Test logout endpoint to handle redirects
-@patch("app.routes.auth.RedirectResponse")
-def test_logout(mock_redirect_response):
-    # Mock RedirectResponse and URL
-    mock_redirect_response.return_value = MagicMock(status_code=200, url="https://yourcognitodomain.com/logout")
+    # Mocking the DB session
+    mock_db = MagicMock()
+    mock_db.query.return_value.filter.return_value.first.return_value = None  # Simulate no user exists
+    app.dependency_overrides[get_db] = lambda: mock_db
     
-    response = client.get("/logout")
-    
-    # Validate that the mock redirect was invoked correctly
-    mock_redirect_response.assert_called_once()
+    app.dependency_overrides[create_user] = NewUser(username="testuser", email="testuser@example.com", cognito_id="cognito_id_123")
+
+    # Send the test request to `/login`
+    response = client.post(
+        "/login",
+        headers={"Authorization": "Bearer header.payload.signature"}
+    )
+
+    # Assertions
     assert response.status_code == 200
-    redirect_url = mock_redirect_response.return_value.url
-    assert redirect_url.startswith("https://")
+    assert response.json() == {
+        "message": "Login successful",
+        "user": {
+            "username": "testuser",
+            "email": "testuser@example.com"
+        }
+    }
+
+    # Clear dependency overrides after the test
+    app.dependency_overrides.clear()
+
+# `/login` endpoint test for existing user
+@patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
+def test_login_user_already_exists(mock_validate_token):
+    mock_db = MagicMock()
+    app.dependency_overrides[get_db] = lambda: mock_db
+    
+    app.dependency_overrides[get_user_by_cognito_id] = NewUser(
+            cognito_id="cognito_id_123",
+            username="existinguser",
+            email="existinguser@example.com"
+        ).model_dump()
+
+    # Send request to `/login` with mock JWT
+    response = client.post(
+        "/login",
+        headers={"Authorization": "Bearer header.payload.signature"}
+    )
+
+    # Assertions
+    assert response.status_code == 400
+    assert response.json() == {"detail": "User already exists"}
+
+    # Clear dependency overrides after the test
+    app.dependency_overrides.clear()
+
+
+# Test for the `/me` endpoint to successfully retrieve current user data
+@patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
+@patch("app.crud.user.get_user_by_cognito_id")
+def test_get_current_user_success(mock_get_user_by_cognito_id, mock_validate_token):
+    # Mock the database function to return the expected user
+    mock_get_user_by_cognito_id.return_value = MagicMock(
+        username="test_user",
+        email="sct.saraalmeida@gmail.com",
+        cognito_id="f02c79fc-f021-706f-aee1-709122218560"
+    )
+
+    # Send the test request to `/me`
+    response = client.get("/me", headers={"Authorization": "Bearer header.payload.signature"})
+
+    # Check that the response status code is 200
+    assert response.status_code == 200
+
+    # Check the response JSON matches the expected user data
+    assert response.json() == {# Patching at the module level
+        "username": "test_user",
+        "email": "sct.saraalmeida@gmail.com",
+        "cognito_id": "f02c79fc-f021-706f-aee1-709122218560"
+    }
+
+# `/me` test for user not found scenario
+@patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
+@patch("app.crud.user.get_user_by_cognito_id", return_value=None) 
+def test_get_current_user_not_found(mock_get_user_by_cognito_id, mock_validate_token):
+
+    app.dependency_overrides[get_user_by_cognito_id] = lambda cognito_id, db: None
+    # Make the request
+    response = client.get("/me", headers={"Authorization": "Bearer header.payload.signature"})
+
+    # Assertions
+    assert response.status_code == 404
+    assert response.json() == {"detail": "User not found"}
+
+    # Clear dependency overrides after the test
+    del app.dependency_overrides[get_user_by_cognito_id]
+    
+# def test_logout():
+#     response = client.get("/logout", follow_redirects=False)
+#     assert response.status_code == 307
+#     assert "https://yourcognito.auth.region.amazoncognito.com/logout" in response.headers["Location"]
+

@@ -14,6 +14,8 @@ def login(
     db: Session = Depends(get_db),
     user_info: dict = Depends(get_current_user_info)  # Inject the user_info dependency
 ):
+    print("User Info received in /login:", user_info)  # Debug
+
     # Extract fields from the token
     username = user_info.get("cognito:username")
     email = user_info.get("email")
@@ -29,12 +31,15 @@ def login(
 
     # Check if user exists in the database
     db_user = get_user_by_cognito_id(cognito_id, db)
+    print("DB User in /login:", db_user)  # Debug
+
     if db_user:
         raise HTTPException(status_code=400, detail="User already exists")
 
     if not db_user:
         user = NewUser(cognito_id=cognito_id,username=username, email=email)
         db_new_user = create_user(user, db)
+        print("New user created:", db_new_user)  # Debug
 
     return {"message": "Login successful", "user": {"username": db_new_user.username, "email": db_new_user.email}}
 
@@ -57,7 +62,7 @@ async def get_current_user(
         "cognito_id": db_user.cognito_id
     }
 
-@router.get("/logout")
-async def logout():
-    logout_url = f"https://{COGNITO_DOMAIN}.auth.{COGNITO_REGION}.amazoncognito.com/logout?client_id={CLIENT_ID}&logout_uri=https://yourapp.com/login"
-    return RedirectResponse(url=logout_url)
+# @router.get("/logout")
+# async def logout():
+#     logout_url = f"https://{COGNITO_DOMAIN}.auth.{COGNITO_REGION}.amazoncognito.com/logout?client_id={CLIENT_ID}&logout_uri=https://yourapp.com/login"
+#     return RedirectResponse(url=logout_url)
