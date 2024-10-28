@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.utils.cognito import get_current_user_info
 from app.schemas.task import TaskCreate
-from app.crud.task import create_task, get_user_tasks  # Import the CRUD functions
+from app.crud.task import create_task, get_user_tasks 
 
 router = APIRouter()
 
