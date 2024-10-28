@@ -54,7 +54,7 @@ jobs:
           DB_NAME: ${{ secrets.MYSQL_DATABASE }}
           DB_PORT: 3306
           ENV: test
-          AWS_REGION: ${{ secrets.COGNITO_REGION }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
           COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
           COGNITO_USER_CLIENT_ID: ${{ secrets.COGNITO_USER_CLIENT_ID }}
           COGNITO_USER_CLIENT_SECRET: ${{ secrets.COGNITO_USER_CLIENT_SECRET }}
