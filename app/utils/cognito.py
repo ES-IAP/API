@@ -2,8 +2,12 @@ from fastapi import Depends, HTTPException, Header
 from jose import jwt
 from app.config import COGNITO_REGION, USER_POOL_ID, CLIENT_ID, COGNITO_DOMAIN
 import requests
+import os
 
 def get_cognito_public_keys():
+    if os.getenv("ENV") == "test":
+        return {}  # Return an empty dictionary or a mocked response for testing
+    
     url = f"https://cognito-idp.{COGNITO_REGION}.amazonaws.com/{USER_POOL_ID}/.well-known/jwks.json"
     response = requests.get(url)
     return response.json()["keys"]
