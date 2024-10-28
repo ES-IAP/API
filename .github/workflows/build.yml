@@ -57,8 +57,9 @@ jobs:
           DB_NAME: user_db
           DB_PORT: 3306
           ENV: development
+        working-directory: ./app
         run: |
-          pytest --cov=./ --cov-report=xml  # Runs tests and generates coverage report in XML
+            pytest --cov=./ --cov-report=xml  # Runs tests and generates coverage report in XML
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
