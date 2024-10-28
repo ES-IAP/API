@@ -80,3 +80,18 @@ def test_auth_callback_missing_code():
     
 #     assert response.status_code == 404
 #     assert response.json() == {"detail": "User not found"}
+def test_logout():
+    # Set an access token cookie
+    client.cookies.set("access_token", "mock_access_token")
+    
+    # Call the logout endpoint
+    response = client.post("/logout")
+    
+    # Verify the response message
+    assert response.status_code == 200
+    assert response.json() == {"message": "User successfully logged out"}
+    
+    # Check that the response contains a Set-Cookie header to clear the cookie
+    set_cookie_header = response.headers["set-cookie"]
+    assert 'access_token="";' in set_cookie_header
+    assert "Max-Age=0" in set_cookie_header

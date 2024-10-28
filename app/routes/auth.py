@@ -99,3 +99,9 @@ def get_current_user(
         "email": db_user.email,
         "cognito_id": db_user.cognito_id
     }
+
+@router.post("/logout")
+def logout(response: Response):
+    # Clear the access token cookie to log out
+    response.delete_cookie(key="access_token")
+    return {"message": "User successfully logged out"}
