@@ -1,4 +1,3 @@
-##create user and get user by email
 from sqlalchemy.orm import Session
 from app.models.user import User as UserModel
 from app.schemas.user import NewUser
