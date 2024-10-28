@@ -70,4 +70,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         with:
-            args: -Dsonar.projectBaseDir=./app
+            args: -Dsonar.projectBaseDir=./
