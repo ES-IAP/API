@@ -46,8 +46,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r ./requirements.txt
 
-      - name: Move to the correct directory
-        run: cd ./app
+    #   - name: Move to the correct directory
+    #     run: cd ./app
 
       - name: Run Tests
         env:
