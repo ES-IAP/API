@@ -53,6 +53,7 @@ jobs:
           DB_HOST: localhost
           DB_NAME: ${{ secrets.MYSQL_DATABASE }}
           DB_PORT: 3306
+          DATABASE_URL: "mysql+pymysql://${{ secrets.MYSQL_USER }}:${{ secrets.MYSQL_PASSWORD }}@127.0.0.1:3306/${{ secrets.MYSQL_DATABASE }}"
           ENV: test
           AWS_REGION: ${{ secrets.AWS_REGION }}
           COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
