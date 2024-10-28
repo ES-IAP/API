@@ -1,0 +1,11 @@
+fastapi[all]
+requests
+pyjwt
+boto3
+sqlalchemy
+pymysql
+python-jose
+pytest
+pytest-cov
+moto
+testcontainers
