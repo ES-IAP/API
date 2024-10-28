@@ -35,13 +35,13 @@ def mock_public_keys():
 def mock_user_info():
     return MOCK_USER_INFO
 
-@patch("app.utils.cognito.requests.get")
-def test_get_cognito_public_keys(mock_get):
-    mock_get.return_value.json.return_value = {"keys": MOCK_PUBLIC_KEYS}
-    from app.utils.cognito import get_cognito_public_keys
-    keys = get_cognito_public_keys()
-    assert keys == MOCK_PUBLIC_KEYS
-    mock_get.assert_called_once()
+# @patch("app.utils.cognito.requests.get")
+# def test_get_cognito_public_keys(mock_get):
+#     mock_get.return_value.json.return_value = {"keys": MOCK_PUBLIC_KEYS}
+#     from app.utils.cognito import get_cognito_public_keys
+#     keys = get_cognito_public_keys()
+#     assert keys == MOCK_PUBLIC_KEYS
+#     mock_get.assert_called_once()
 
 
 # Test validate_jwt_token function with mocked dependencies

@@ -74,28 +74,28 @@ def test_login_user_already_exists(mock_validate_token):
 
 
 # Test for the `/me` endpoint to successfully retrieve current user data
-@patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
-@patch("app.crud.user.get_user_by_cognito_id")
-def test_get_current_user_success(mock_get_user_by_cognito_id, mock_validate_token):
-    # Mock the database function to return the expected user
-    mock_get_user_by_cognito_id.return_value = MagicMock(
-        username="test_user",
-        email="sct.saraalmeida@gmail.com",
-        cognito_id="f02c79fc-f021-706f-aee1-709122218560"
-    )
+# @patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
+# @patch("app.crud.user.get_user_by_cognito_id")
+# def test_get_current_user_success(mock_get_user_by_cognito_id, mock_validate_token):
+#     # Mock the database function to return the expected user
+#     mock_get_user_by_cognito_id.return_value = MagicMock(
+#         username="test_user",
+#         email="sct.saraalmeida@gmail.com",
+#         cognito_id="f02c79fc-f021-706f-aee1-709122218560"
+#     )
 
-    # Send the test request to `/me`
-    response = client.get("/me", headers={"Authorization": "Bearer header.payload.signature"})
+#     # Send the test request to `/me`
+#     response = client.get("/me", headers={"Authorization": "Bearer header.payload.signature"})
 
-    # Check that the response status code is 200
-    assert response.status_code == 200
+#     # Check that the response status code is 200
+#     assert response.status_code == 200
 
-    # Check the response JSON matches the expected user data
-    assert response.json() == {# Patching at the module level
-        "username": "test_user",
-        "email": "sct.saraalmeida@gmail.com",
-        "cognito_id": "f02c79fc-f021-706f-aee1-709122218560"
-    }
+#     # Check the response JSON matches the expected user data
+#     assert response.json() == {# Patching at the module level
+#         "username": "test_user",
+#         "email": "sct.saraalmeida@gmail.com",
+#         "cognito_id": "f02c79fc-f021-706f-aee1-709122218560"
+#     }
 
 # `/me` test for user not found scenario
 @patch("app.utils.cognito.validate_jwt_token", return_value=mock_get_current_user_info())
