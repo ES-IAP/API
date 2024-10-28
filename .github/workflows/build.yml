@@ -59,6 +59,7 @@ jobs:
           COGNITO_USER_CLIENT_ID: ${{ secrets.COGNITO_USER_CLIENT_ID }}
           COGNITO_USER_CLIENT_SECRET: ${{ secrets.COGNITO_USER_CLIENT_SECRET }}
           COGNITO_TOKEN_ENDPOINT: ${{ secrets.COGNITO_TOKEN_ENDPOINT }}
+          PYTHONPATH: ${{ github.workspace }} 
         run: |
             pytest --cov=./ --cov-report=xml  # Runs tests and generates coverage report in XML
 
