@@ -17,7 +17,7 @@ router = APIRouter()
 def login():
     cognito_login_url = (
         f"https://{COGNITO_DOMAIN}.auth.{COGNITO_REGION}.amazoncognito.com/login?"
-        f"client_id={CLIENT_ID}&response_type=code&scope=openid+profile+email&"
+        f"client_id={CLIENT_ID}&response_type=code&scope=email+openid+profile&"
         f"redirect_uri=http://localhost:8000/auth/callback" 
     )
     return RedirectResponse(url=cognito_login_url)
@@ -75,12 +75,15 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,  # Enable in production
-        samesite="lax"  # Adjust as needed
+        max_age=3600, 
+        secure=False,
+        samesite="lax"  # "lax" is usually compatible with cross-site redirects
     )
 
-    return {"message": "User successfully logged in"}
-# Get the current user information from the access token in the cookie
+    # Return a RedirectResponse after setting the cookie
+    return RedirectResponse(url="http://localhost:3000")
+
+
 @router.get("/me")
 def get_current_user(
     db: Session = Depends(get_db),
@@ -102,6 +105,10 @@ def get_current_user(
 
 @router.post("/logout")
 def logout(response: Response):
-    # Clear the access token cookie to log out
+    cognito_logout_url = (
+        f"https://{COGNITO_DOMAIN}/logout?"
+        f"client_id={CLIENT_ID}&logout_uri=http://localhost:3000/"  # REDIRECT_URI deve estar registrado no Cognito
+    )
+    response = RedirectResponse(url=cognito_logout_url)
     response.delete_cookie(key="access_token")
-    return {"message": "User successfully logged out"}
+    return response
