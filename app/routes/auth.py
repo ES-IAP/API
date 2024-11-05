@@ -70,6 +70,7 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         user = NewUser(cognito_id=cognito_id, username=username, email=email)
         db_user = create_user(user, db)
 
+    redirect=RedirectResponse(url="http://localhost:3000")
     # Set the access token in a secure HTTP-only cookie
     response.set_cookie(
         key="access_token",
@@ -79,8 +80,10 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         samesite="lax"  # Adjust as needed
     )
 
-    return {"message": "User successfully logged in"}
-# Get the current user information from the access token in the cookie
+    string = f"Bem Vindo: {db_user.username} - {db_user.email}"
+    redirect.message = string
+    return redirect
+
 @router.get("/me")
 def get_current_user(
     db: Session = Depends(get_db),
