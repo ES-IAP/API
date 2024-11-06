@@ -22,5 +22,11 @@ def get_user_tasks(db: Session, user_id: str):
     tasks = db.query(Task).filter(Task.user_id == user_id).all()
     return tasks
 
+def delete_task(db: Session, task_id: int, user_id: str):
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
+    if task:
+        db.delete(task)
+        db.commit()
+    return task
 
 
