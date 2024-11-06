@@ -70,8 +70,10 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         user = NewUser(cognito_id=cognito_id, username=username, email=email)
         db_user = create_user(user, db)
 
+    redirect_response = RedirectResponse(url="http://localhost:3000/")
+
     # Set the access token in a secure HTTP-only cookie
-    response.set_cookie(
+    redirect_response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
@@ -81,7 +83,7 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
     )
 
     # Return a RedirectResponse after setting the cookie
-    return RedirectResponse(url="http://localhost:3000")
+    return redirect_response
 
 
 @router.get("/me")

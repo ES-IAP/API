@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.utils.cognito import get_current_user_info
 from app.schemas.task import TaskCreate
-from app.crud.task import create_task, get_user_tasks 
+from app.crud.task import create_task, get_user_tasks, delete_task
 
 router = APIRouter()
 
@@ -34,3 +34,19 @@ def get_user_tasks_route(
         raise HTTPException(status_code=404, detail="No tasks found")
 
     return tasks
+
+@router.delete("/tasks/{task_id}")
+def delete_task_route(
+    task_id: int,
+    db: Session = Depends(get_db),
+    user_info: dict = Depends(get_current_user_info)
+):
+    cognito_id = user_info.get("sub")
+    if not cognito_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    task = delete_task(db=db, task_id=task_id, user_id=cognito_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return task
