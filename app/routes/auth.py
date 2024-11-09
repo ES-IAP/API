@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request, Cookie
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.utils.cognito import get_current_user_info, validate_jwt_token
+from app.utils.cognito import get_current_user, validate_jwt_token
 from app.schemas.user import NewUser
 from app.config import COGNITO_REGION, CLIENT_ID, CLIENT_SECRET, COGNITO_DOMAIN
 from app.crud.user import create_user, get_user_by_cognito_id
@@ -70,7 +70,7 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         user = NewUser(cognito_id=cognito_id, username=username, email=email)
         db_user = create_user(user, db)
 
-    redirect_response = RedirectResponse(url="http://localhost:3000/")
+    redirect_response = RedirectResponse(url="http://localhost:3000/welcome")
 
     # Set the access token in a secure HTTP-only cookie
     redirect_response.set_cookie(
@@ -87,29 +87,28 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
 
 
 @router.get("/me")
-def get_current_user(
+def get_current_user_profile(
     db: Session = Depends(get_db),
-    user_info: dict = Depends(get_current_user_info)
+    user: str = Depends(get_current_user)  
 ):
-    cognito_id = user_info.get("sub")
-    if not cognito_id:
-        raise HTTPException(status_code=500, detail="Cognito ID is missing in token")
-
+    cognito_id = user.cognito_id
+    # Fetch the user information from the database using cognito_id
     db_user = get_user_by_cognito_id(cognito_id, db)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Return the user's profile information
     return {
+        "cognito_id": db_user.cognito_id,
         "username": db_user.username,
-        "email": db_user.email,
-        "cognito_id": db_user.cognito_id
+        "email": db_user.email
     }
 
 @router.post("/logout")
-def logout(response: Response):
+async def logout(response: Response):
     cognito_logout_url = (
         f"https://{COGNITO_DOMAIN}/logout?"
-        f"client_id={CLIENT_ID}&logout_uri=http://localhost:3000/"  # REDIRECT_URI deve estar registrado no Cognito
+        f"client_id={CLIENT_ID}&logout_uri=http://localhost:3000/" 
     )
     response = RedirectResponse(url=cognito_logout_url)
     response.delete_cookie(key="access_token")
