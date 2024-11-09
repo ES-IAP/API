@@ -1,8 +1,11 @@
-from fastapi import HTTPException, Cookie
+from fastapi import HTTPException, Cookie, Depends, Request
 from jose import jwt, JWTError
 from app.config import COGNITO_REGION, USER_POOL_ID, CLIENT_ID
 import requests
 import os
+from sqlalchemy.orm import Session
+from app.db.database import get_db
+from app.crud.user import get_user_by_cognito_id
 
 # Function to retrieve Cognito public keys
 def get_cognito_public_keys():
@@ -39,14 +42,26 @@ def validate_jwt_token(token: str):
 
     return decoded_token
 
-# Dependency function to get user info from the access token in the cookie
-def get_current_user_info(access_token: str = Cookie(None)):
+def get_current_user(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    access_token = request.cookies.get("access_token")
     if not access_token:
         raise HTTPException(status_code=401, detail="Token not provided")
-
+    
     try:
         user_info = validate_jwt_token(access_token)
-    except (JWTError, ValueError):
+    except (jwt.JWTError, ValueError):
         raise HTTPException(status_code=401, detail="Invalid token")
-
-    return user_info
+    
+    cognito_id = user_info.get("sub")
+    if not cognito_id:
+        raise HTTPException(status_code=401, detail="Cognito ID is missing in token")
+    
+    # Retrieve user from database or create if doesn't exist
+    db_user = get_user_by_cognito_id(cognito_id, db)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return db_user
