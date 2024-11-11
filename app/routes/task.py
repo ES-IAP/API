@@ -59,3 +59,26 @@ async def update_task_status(task_id: int, db: Session = Depends(get_db), user: 
     db.refresh(task)
     return task
 
+@router.put("/tasks/{task_id}", response_model=TaskRead)
+def update_task_route(
+    task_id: int,
+    task: TaskCreate,
+    db: Session = Depends(get_db),
+    user: str = Depends(get_current_user)
+):
+    existing_task = get_task(db=db, task_id=task_id, user_id=user.cognito_id)
+    if not existing_task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Update task details
+    existing_task.title = task.title
+    existing_task.description = task.description
+    existing_task.priority = task.priority
+    existing_task.deadline = task.deadline
+    existing_task.last_updated = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(existing_task)
+    return existing_task
+
+
