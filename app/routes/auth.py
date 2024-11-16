@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, Request, Cookie
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from app.db.database import get_db
-from app.utils.cognito import get_current_user_info, validate_jwt_token
+from app.utils.cognito import get_current_user, validate_jwt_token
 from app.schemas.user import NewUser
 from app.config import COGNITO_REGION, CLIENT_ID, CLIENT_SECRET, COGNITO_DOMAIN
 from app.crud.user import create_user, get_user_by_cognito_id
@@ -17,7 +17,7 @@ router = APIRouter()
 def login():
     cognito_login_url = (
         f"https://{COGNITO_DOMAIN}.auth.{COGNITO_REGION}.amazoncognito.com/login?"
-        f"client_id={CLIENT_ID}&response_type=code&scope=openid+profile+email&"
+        f"client_id={CLIENT_ID}&response_type=code&scope=email+openid+profile&"
         f"redirect_uri=http://localhost:8000/auth/callback" 
     )
     return RedirectResponse(url=cognito_login_url)
@@ -70,38 +70,46 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         user = NewUser(cognito_id=cognito_id, username=username, email=email)
         db_user = create_user(user, db)
 
+    redirect_response = RedirectResponse(url="http://localhost:3000/welcome")
+
     # Set the access token in a secure HTTP-only cookie
-    response.set_cookie(
+    redirect_response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,  # Enable in production
-        samesite="lax"  # Adjust as needed
+        max_age=3600, 
+        secure=False,
+        samesite="lax"  # "lax" is usually compatible with cross-site redirects
     )
 
-    return {"message": "User successfully logged in"}
-# Get the current user information from the access token in the cookie
-@router.get("/me")
-def get_current_user(
-    db: Session = Depends(get_db),
-    user_info: dict = Depends(get_current_user_info)
-):
-    cognito_id = user_info.get("sub")
-    if not cognito_id:
-        raise HTTPException(status_code=500, detail="Cognito ID is missing in token")
+    # Return a RedirectResponse after setting the cookie
+    return redirect_response
 
+
+@router.get("/me")
+def get_current_user_profile(
+    db: Session = Depends(get_db),
+    user: str = Depends(get_current_user)  
+):
+    cognito_id = user.cognito_id
+    # Fetch the user information from the database using cognito_id
     db_user = get_user_by_cognito_id(cognito_id, db)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Return the user's profile information
     return {
+        "cognito_id": db_user.cognito_id,
         "username": db_user.username,
-        "email": db_user.email,
-        "cognito_id": db_user.cognito_id
+        "email": db_user.email
     }
 
 @router.post("/logout")
-def logout(response: Response):
-    # Clear the access token cookie to log out
+async def logout(response: Response):
+    cognito_logout_url = (
+        f"https://{COGNITO_DOMAIN}/logout?"
+        f"client_id={CLIENT_ID}&logout_uri=http://localhost:3000/" 
+    )
+    response = RedirectResponse(url=cognito_logout_url)
     response.delete_cookie(key="access_token")
-    return {"message": "User successfully logged out"}
+    return response
