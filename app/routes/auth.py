@@ -104,12 +104,20 @@ def get_current_user_profile(
         "email": db_user.email
     }
 
-@router.post("/logout")
+@router.get("/logout")
 async def logout(response: Response):
-    cognito_logout_url = (
-        f"https://{COGNITO_DOMAIN}/logout?"
-        f"client_id={CLIENT_ID}&logout_uri=http://localhost:3000/" 
+    # Clear the access token cookie
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        samesite="lax",
+        secure=False  # Set to True in production (HTTPS)
     )
-    response = RedirectResponse(url=cognito_logout_url)
-    response.delete_cookie(key="access_token")
-    return response
+
+    # Redirect to Cognito logout URL
+    cognito_logout_url = (
+        f"https://{COGNITO_DOMAIN}.auth.{COGNITO_REGION}.amazoncognito.com/logout?"
+        f"client_id={CLIENT_ID}&logout_uri=http://localhost:3000/"
+    )
+
+    return RedirectResponse(url=cognito_logout_url)
