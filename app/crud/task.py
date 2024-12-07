@@ -35,4 +35,26 @@ def delete_task(db: Session, task_id: int, user_id: str):
         db.commit()
     return task
 
+def update_task(db: Session, task_id: int, user_id: str, updated_fields: dict):
+    """
+    Update an existing task with the given fields.
+    
+    :param db: Database session
+    :param task_id: ID of the task to update
+    :param user_id: ID of the user who owns the task
+    :param updated_fields: Dictionary of fields to update
+    :return: Updated task
+    """
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
+    if not task:
+        return None
 
+    # Update only the provided fields
+    for key, value in updated_fields.items():
+        if hasattr(task, key) and value is not None:
+            setattr(task, key, value)
+
+    task.last_updated = datetime.now()  # Update the last_updated field
+    db.commit()
+    db.refresh(task)
+    return task
