@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.utils.cognito import get_current_user, validate_jwt_token
 from app.schemas.user import NewUser
-from app.config import COGNITO_REGION, CLIENT_ID, CLIENT_SECRET, COGNITO_DOMAIN
+from app.config import COGNITO_REGION, CLIENT_ID, CLIENT_SECRET, COGNITO_DOMAIN, REDIRECT_URI, FRONTEND_URL
 from app.crud.user import create_user, get_user_by_cognito_id
 import requests
 import json
@@ -18,7 +18,7 @@ def login():
     cognito_login_url = (
         f"https://{COGNITO_DOMAIN}.auth.{COGNITO_REGION}.amazoncognito.com/login?"
         f"client_id={CLIENT_ID}&response_type=code&scope=email+openid+profile&"
-        f"redirect_uri=http://localhost:8000/auth/callback" 
+        f"redirect_uri={REDIRECT_URI}" 
     )
     return RedirectResponse(url=cognito_login_url)
 
@@ -37,7 +37,7 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         "client_id": CLIENT_ID,
         "client_secret": CLIENT_SECRET,
         "code": code,
-        "redirect_uri": "http://localhost:8000/auth/callback"  # Match with Cognito's configuration
+        "redirect_uri": REDIRECT_URI  # Match with Cognito's configuration
     }
     token_headers = {"Content-Type": "application/x-www-form-urlencoded"}
 
@@ -70,7 +70,7 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         user = NewUser(cognito_id=cognito_id, username=username, email=email)
         db_user = create_user(user, db)
 
-    redirect_response = RedirectResponse(url="http://localhost:3000/welcome")
+    redirect_response = RedirectResponse(url=f"{FRONTEND_URL}/welcome")
 
     # Set the access token in a secure HTTP-only cookie
     redirect_response.set_cookie(
@@ -108,7 +108,7 @@ def get_current_user_profile(
 async def logout(response: Response):
     cognito_logout_url = (
         f"https://{COGNITO_DOMAIN}/logout?"
-        f"client_id={CLIENT_ID}&logout_uri=http://localhost:3000/" 
+        f"client_id={CLIENT_ID}&logout_uri={FRONTEND_URL}" 
     )
     response = RedirectResponse(url=cognito_logout_url)
     response.delete_cookie(key="access_token")
