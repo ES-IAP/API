@@ -70,7 +70,9 @@ def auth_callback(request: Request, response: Response, db: Session = Depends(ge
         user = NewUser(cognito_id=cognito_id, username=username, email=email)
         db_user = create_user(user, db)
 
-    redirect_response = RedirectResponse(url=f"{FRONTEND_URL}/welcome")
+    redirect_response = RedirectResponse(url=(f"{FRONTEND_URL}/welcome"))
+    url=(f"{FRONTEND_URL}/welcome")
+    print(url)
 
     # Set the access token in a secure HTTP-only cookie
     redirect_response.set_cookie(
@@ -104,7 +106,7 @@ def get_current_user_profile(
         "email": db_user.email
     }
 
-@router.post("/logout")
+@router.get("/logout")
 async def logout(response: Response):
     cognito_logout_url = (
         f"https://{COGNITO_DOMAIN}/logout?"
