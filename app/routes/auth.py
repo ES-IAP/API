@@ -109,7 +109,7 @@ def get_current_user_profile(
 @router.get("/logout")
 async def logout(response: Response):
     cognito_logout_url = (
-        f"https://{COGNITO_DOMAIN}/logout?"
+        f"https://{COGNITO_DOMAIN}.auth.{COGNITO_REGION}.amazoncognito.com/logout?"
         f"client_id={CLIENT_ID}&logout_uri={FRONTEND_URL}" 
     )
     response = RedirectResponse(url=cognito_logout_url)
